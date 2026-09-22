@@ -200,3 +200,12 @@ several MB that the engine-side script then parses. Fix: stage 1 now calls `GET 
 from the flow's first step), which answers only for that container (2.3 KB on the lab) with `container_id`, `container_name` and every
 version (`id`, `version_name`, `tip`); `GET /ops/std/bpm/containers?acronym=` is **not** filtered (returns all containers). Needs BAW 18+
 (/ops); on plain BPM 8.6.x without /ops the 1.1 flow is the fallback.
+
+## 1.3.1 (2026-09-22): minimal `parts=` on the classic instance call (1.3 = the same content; the BAW 20 lab already had a 1.3 snapshot, so 1.3.1 is the deployed name)
+
+`GET /process/{id}?parts=all` returns header, variables, business data, execution tree, diagram, tasks, documents and actions - on a loaded
+server with large variables that is the expensive part of every token / timer operation. The four calls now ask only for what their mapping
+reads (verified on the lab: `parts` takes a comma list; 6 116 bytes for `all` vs 2 425 for `executionTree,diagram` on a small instance, far more
+on real ones): *PT Instance Position* and *PT Bulk Token Position* `parts=executionTree,diagram`, *PT Instance Timers* `parts=diagram`
+(attached timer tokens in `diagram.step[].attachedTimer`), *PT Bulk Move Tokens* stage 1 `parts=executionTree`. Answers keep `snapshotTip`.
+`GET /users?parts=all` (assign picker) is a different endpoint and stays.

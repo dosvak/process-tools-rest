@@ -13,6 +13,7 @@ far the standard building blocks go.
 
 | File | Target | Notes |
 |---|---|---|
+| [`packages/Process-Tools-REST-1.3.1.twx`](packages/Process-Tools-REST-1.3.1.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.3.1**: the classic instance calls of *Tokens*, *Timers* and *Bulk Move Tokens* ask only for the parts they read (`parts=executionTree,diagram`, `parts=diagram`, `parts=executionTree`) instead of `parts=all`, which also carried variables, business data, tasks and documents - lighter on a loaded server; includes the 1.2 change |
 | [`packages/Process-Tools-REST-1.2.twx`](packages/Process-Tools-REST-1.2.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.2**: *App Processes* resolves the application through the acronym-filtered `GET /ops/std/bpm/containers/{acronym}/versions` instead of the unfiltered classic `GET /processApps`, which returned every application with all its snapshots and stalled the tab on servers with hundreds of applications; everything else unchanged |
 | [`packages/Process-Tools-REST-1.1.twx`](packages/Process-Tools-REST-1.1.twx) | traditional BAW / IBM BPM 8.6.x and later | process app **Process Tools REST** (`PTREST`) 1.1 |
 | [`packages/cp4ba/Process-Tools-REST-1.1-CP4BA_25.twx`](packages/cp4ba/Process-Tools-REST-1.1-CP4BA_25.twx) | CP4BA 25.0.x Workflow Authoring | exported from CP4BA 25.0.1 after validation, `/bas` context paths preset |
