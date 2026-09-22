@@ -149,7 +149,7 @@ Own tab (user decision: separate from Tokens, which moves one token of one insta
 
 | Service | Input -> output | Calls |
 |---|---|---|
-| `PT App Processes` | PTInstanceCriteria (containers, versions) -> PTProcesses (ProcessDef rows, appId, snapshotId) | stage 1 `GET /processApps` (classic) -> the app of the acronym; stage 2 `GET /assets?processAppId=&filter=BPD[&snapshotId=]` -> `data.BPD[]` (name, poId, snapshotName). Snapshot: the one whose acronym / name matches Versions, else the tip / default; unknown acronym or snapshot -> Error with the installed snapshots |
+| `PT App Processes` | PTInstanceCriteria (containers, versions) -> PTProcesses (ProcessDef rows, appId, snapshotId) | stage 1 `GET /ops/std/bpm/containers/{acronym}/versions` (filtered by acronym: container_id + versions; 1.2 - replaces the unfiltered classic `GET /processApps`, which returns every application with all its snapshots and stalled the flow on a server with many applications); stage 2 `GET /assets?processAppId=&filter=BPD[&snapshotId=]` (snapshot = the version named by Versions, empty = tip) |
 | `PT Bulk Token Position` | PTInstanceSearch (the search result) -> PTBulkPosition (locations, steps, tokens, common, commonName) | one `GET /process/{id}?parts=all` per instance of the result; tokens grouped by `flowObjectId` (= diagram step ID); sorted by the number of instances |
 | `PT Bulk Move Tokens` | PTBulkMove (ids, source, sourceName, target, targetName) -> PTResult | stage 1 `GET /process/{id}?parts=all` per selected instance (fresh token ids); stage 2 `POST /process/{id}?action=moveToken&tokenId=&target=&resume=true&parts=none` per token found at the source; report: moved / skipped (no token at the source) / refused / not read |
 | `PT Bulk Tokens To CSV` | PTBulkPosition -> PTCsv | formats the tokens per instance |
@@ -191,3 +191,12 @@ the new tab: process list, unknown acronym / snapshot errors, process pick, sear
 Cancel / Confirm, 2 tokens moved to End -> both instances STATE_FINISHED over REST, analysis reload, "all instances" guard, CSV),
 direct runs of the two-stage flows, designer check `tools/pc_ptrest_webpd_check.py` (validation counter 0). Report:
 `docs/FUNCTIONAL-TEST-PTREST-2026-09-10.md`.
+
+## 1.2 (2026-09-22): App Processes on a server with many applications
+
+Symptom: *PT App Processes* never returned on a server with hundreds of applications. Cause: the classic `GET /processApps` has no filter
+parameter (`?filter=` / `?processAppAcronym=` are ignored, verified on the lab) and returns every application with all installed snapshots -
+several MB that the engine-side script then parses. Fix: stage 1 now calls `GET /ops/std/bpm/containers/{acronym}/versions` (CSRF token
+from the flow's first step), which answers only for that container (2.3 KB on the lab) with `container_id`, `container_name` and every
+version (`id`, `version_name`, `tip`); `GET /ops/std/bpm/containers?acronym=` is **not** filtered (returns all containers). Needs BAW 18+
+(/ops); on plain BPM 8.6.x without /ops the 1.1 flow is the fallback.
