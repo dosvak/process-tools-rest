@@ -238,3 +238,44 @@ Ids* run directly on both (`ft_rest_test.py tools/ptrest_ids.json "PT Parse Inst
 1.4 (the "unknown acronym" expectation dated from 1.1 - since 1.2 the /ops lookup answers `CWTBG0624E: Container ... does not exist`, the test
 now accepts both; Task Data finds no open task because the Tasks section completes the last one - known ordering issue). Designer: *PT Parse
 Instance Ids* opens with validation counter 0. Manual replication guide: `docs/PTREST-1.4-MANUAL-CHANGES.md`.
+
+## 1.5 / 1.5.1 (2026-09-23): Fire Timers Selective
+
+User request: fire timers in bulk over a pasted list of instance ids, in the same fashion as Bulk Token Selective, reusing its services
+and coach code as far as possible. Follow-up (user, after 1.5): "select a timer, or none for every timer" is too dangerous - allow only
+**one (common) timer per fire**. 1.5 (imported on 8.6.2 only) had the "none = every pending timer" option; **1.5.1 replaces it** and is the
+only version to publish.
+
+### What changed (generator only, `tools/build_ptrest.py --snapshot 1.5.1`, 121 objects; no new business object)
+
+- **PT Bulk Timer Position** (`PTInstanceSearch -> PTBulkPosition`, copy of *PT Bulk Token Position*): classic
+  `GET /process/{id}?parts=diagram` per listed instance; the timers holding tokens = intermediate timer events (`step.activityType ==
+  "timer"`, `step.tokenID`) and timers attached to an activity (`step.attachedTimer[].tokenID`) - the Timers tab only shows the attached
+  ones. Grouped per timer (key = step ID, or step ID / attached timer ID), instances / tokens / share per timer, **common timer first**,
+  timer tokens per instance.
+- **PT Bulk Fire Timers** (`PTBulkMove -> PTResult`, copy of *PT Bulk Move Tokens*, two stages): stage 1 re-reads the diagrams (fresh
+  token ids), stage 2 = **one** `POST /process/{id}?action=fireTimer&timerTokenId=` per instance, for the first token at the chosen timer
+  (`source` = timer key, `sourceName` = its name). An empty `source` is refused before any call ("Error: select the one timer to fire ...
+  nothing was fired"); an instance with more than one token at that timer gets one fired and is reported as having tokens left pending;
+  instances without a token there are reported as skipped.
+- View **Fire Timers Selective** (`views.fire_timers_selective`, tab after Timers): the Text Area + *PT Parse Instance Ids* of 1.4
+  (reused unchanged), Instances table (multi-select), Pending timers table (single-select, common timer first), Timer tokens per instance
+  + CSV (*PT Bulk Tokens To CSV*, reused), *Fire timers (selected instances)* / *(all instances)*: both refuse without a selected timer
+  row, the confirmation names the timer and "one token per instance", the analysis reloads after the fire.
+
+### Verification (2026-09-23)
+
+8.6.2: 1.5.1 imported; *PT Bulk Fire Timers* run directly with an empty timer key -> Error, nothing fired. Deep test
+(`docs/ptrest_test_151.json`, two fresh Test Timer Process instances): the 8 checks of the new tab pass - empty list error, 2 instances
+with the common timer 'Wait 4 hours' (2 of 2), Fire without a selected timer -> error and no confirmation, Fire (selected) without an
+instance -> error, confirmation text, "Success: 2 timer(s) fired at 'Wait 4 hours'" with both instances `STATE_FINISHED` over REST, reload
+with no timer pending, CSV. The first run also exposed a test bug: the unknown-acronym check (passing since the 1.4 test fix) left its error
+dialog open and the rest of the Bulk Move Tokens section failed behind it - the test now closes it. BAW 26 (`https://wc.dosvak.net`): 1.5.1 imported
+(snapshots 1.3.1, 1.4, 1.5.1 - 1.5 never went there); flows run directly on two fresh Test Timer Process instances: analysis -> common
+timer 'Wait 4 hours' (2 of 2), fire with that key -> "Success: 2 timer(s) fired", both `STATE_FINISHED`; empty key -> error, nothing fired.
+Full deep test after the test fixes below: 8.6.2 **96 / 96** (`docs/ptrest_test_151.json`); BAW 26 **94 / 96**
+(`docs/ptrest_test_151_26.json`, test app Test Data Generator - BAW JSON Test is not installed there; the 8 new checks pass; failures outside
+this release: the Assign-to-group picker lists 0 groups on 26, and the known Task Data ordering issue). Test fixes: the unknown-acronym error
+dialog is closed; `tab()` clicks tabs that overflowed into the tab-row menu (the new tab pushed Execute JavaScript there at 1800 px); cleanup
+deletes with `?action=delete`; the test app / BPD ids are resolved per lab from `GET /exposed/process` (BAWJSON, else TDGEN).
+Manual replication guide: `docs/PTREST-1.5-MANUAL-CHANGES.md` (1.4 -> 1.5.1).
