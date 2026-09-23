@@ -209,3 +209,32 @@ reads (verified on the lab: `parts` takes a comma list; 6 116 bytes for `all` vs
 on real ones): *PT Instance Position* and *PT Bulk Token Position* `parts=executionTree,diagram`, *PT Instance Timers* `parts=diagram`
 (attached timer tokens in `diagram.step[].attachedTimer`), *PT Bulk Move Tokens* stage 1 `parts=executionTree`. Answers keep `snapshotTip`.
 `GET /users?parts=all` (assign picker) is a different endpoint and stays.
+
+## 1.4 (2026-09-23): Bulk Token Selective
+
+User request: a replica of Bulk Move Tokens where the instances come from a pasted list instead of the application / process lookup,
+the analysis and the move run over exactly that list, everything else unchanged, services and coaches reused as far as possible.
+
+### What changed (generator only, `tools/build_ptrest.py --snapshot 1.4`, 118 objects)
+
+- Business object `PTIdList {text}`; script flow **PT Parse Instance Ids** (`PTIdList -> PTInstanceSearch`): splits the text on commas,
+  semicolons, spaces and line breaks, strips quotes, accepts `2072.55` and bare `55` (prefixed `2072.`), drops blanks and duplicates,
+  reports invalid entries in the message; the result has the same shape as *PT Search Instances* (one `ProcessV2Row` per id, name empty).
+- View **Bulk Token Selective** = `views.bulk_move(svc, selective=True)`: the inputs row, the Load processes / Search instances buttons
+  and the Processes table are replaced by a Text Area bound to `tw.options.idlist.text` and the button *Analyze tokens* runs
+  `PT Parse Instance Ids` first; its result fills the **Instances (from the list)** table (`tw.options.search`) and, when ok, runs the
+  shared *PT Bulk Token Position*. Tables (Instances multi-select, Current token locations, Steps, Tokens per instance + CSV), the
+  confirmation dialog, *Move tokens (selected instances)* / *(all instances)*, *PT Bulk Move Tokens* and the reload of the analysis are the
+  same code as the Bulk Move Tokens tab (one function, one flag). Tab order: after Bulk Move Tokens.
+- Deep test `tools/pc_ptrest_test.py`: two more Test Task Process instances; the new section pastes `abc, <bare id>\n2072.<id>;<id>`
+  (invalid, bare, prefixed, duplicate), expects 2 listed instances and the common active token, the location / step guard, the
+  confirmation for 2 instances, Success with 2 tokens moved and both instances completed over REST, the reload, the CSV.
+
+### Verification (2026-09-23)
+
+Imported on 8.6.2 (`<process-center-host>`) and BAW 26 (`https://wc.dosvak.net`) as snapshot 1.4 (same branch / dashboard ids). *PT Parse Instance
+Ids* run directly on both (`ft_rest_test.py tools/ptrest_ids.json "PT Parse Instance Ids" '{"data": {"text": "abc, 55\n2072.66; 66 \"77\""}}'`
+-> 3 ids, abc ignored). Deep test on 8.6.2 (`docs/ptrest_test_14.json`): 85 checks, the 8 of the new tab pass; 2 failures are unrelated to
+1.4 (the "unknown acronym" expectation dated from 1.1 - since 1.2 the /ops lookup answers `CWTBG0624E: Container ... does not exist`, the test
+now accepts both; Task Data finds no open task because the Tasks section completes the last one - known ordering issue). Designer: *PT Parse
+Instance Ids* opens with validation counter 0. Manual replication guide: `docs/PTREST-1.4-MANUAL-CHANGES.md`.
