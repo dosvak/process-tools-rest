@@ -1,7 +1,7 @@
 # Process Tools REST
 
 The process administration tools of IBM Business Automation Workflow - **Instances, Instance Data, Tokens, Timers, Tasks, Task Data,
-Event Manager Tasks, Instance Cleanup, Send Event Message, Execute JavaScript** and, new in 1.1, **Bulk Move Tokens** - as a
+Event Manager Tasks, Instance Cleanup, Send Event Message, Execute JavaScript**, the bulk token / timer tools and, new in 1.6.1, the **ENV Manager** and **EPV Manager** - as a
 "vanilla" BAW process application: business objects for every input and output, one service flow per REST operation, out-of-the-box
 controls bound to business data, Service Call controls, modal sections for editors, pickers and confirmations. No JavaScript
 library, no inline coach scripts, no third-party toolkit, no Java: everything a BAW developer can open, read and change in the designer.
@@ -13,6 +13,7 @@ far the standard building blocks go.
 
 | File | Target | Notes |
 |---|---|---|
+| [`packages/Process-Tools-REST-1.6.1.twx`](packages/Process-Tools-REST-1.6.1.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.6.1**: new tabs *ENV Manager* and *EPV Manager* - enter application / toolkit acronyms, snapshots (empty = all), a scope (all / active / newest) and name / value filters; *Lookup* lists the environment variables or EPV variables of every picked snapshot with the value in effect **on this server**; edit the Value cells and *Save changes* (only the changed rows, after a confirmation) or give the selected rows one value with *Set value for selected*; one `/ops` call per snapshot (`env_vars` / `epvs`). EPV Manager adds an effective date (empty = now), a reason, the scheduled values and a history dialog. The designer's per-environment-type values of a snapshot are not changed. Manual replication on another environment: [docs/MANUAL-CHANGES-1.6.md](docs/MANUAL-CHANGES-1.6.md). Verified on BAW 8.6.2 and BAW 26 |
 | [`packages/Process-Tools-REST-1.5.1.twx`](packages/Process-Tools-REST-1.5.1.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.5.1**: new tab *Fire Timers Selective* - paste a list of instance ids, *Analyze timers* lists the timers holding tokens in them (intermediate timer events and timers attached to activities) with the **common timer** first, then fire **one selected timer** for the selected or all listed instances - one `fireTimer` call per instance, never "every pending timer" (the service refuses a request without a timer). New services *PT Bulk Timer Position* and *PT Bulk Fire Timers*; *PT Parse Instance Ids*, the tables, the confirmation and the CSV export are reused from 1.4. Manual replication on another environment: [docs/MANUAL-CHANGES-1.5.md](docs/MANUAL-CHANGES-1.5.md). Verified on BAW 8.6.2 and BAW 26 |
 | [`packages/Process-Tools-REST-1.4.twx`](packages/Process-Tools-REST-1.4.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.4**: new tab *Bulk Token Selective* - paste a list of instance ids (`2072.55` or `55`, separated by commas, spaces or line breaks) instead of looking the instances up; the token analysis, the location / step tables and *Move tokens* run over exactly that list through the same services (*PT Bulk Token Position*, *PT Bulk Move Tokens*) plus the small script flow *PT Parse Instance Ids*. Manual replication on another environment: [docs/MANUAL-CHANGES-1.4.md](docs/MANUAL-CHANGES-1.4.md). Verified on BAW 8.6.2 and BAW 26 |
 | [`packages/Process-Tools-REST-1.3.1.twx`](packages/Process-Tools-REST-1.3.1.twx) | traditional BAW 18 and later (needs the `/ops` API) | **1.3.1**: the classic instance calls of *Tokens*, *Timers* and *Bulk Move Tokens* ask only for the parts they read (`parts=executionTree,diagram`, `parts=diagram`, `parts=executionTree`) instead of `parts=all`, which also carried variables, business data, tasks and documents - lighter on a loaded server; includes the 1.2 change |
@@ -57,6 +58,8 @@ The same files are attached to the [releases](../../releases). Dependencies: Sys
 | Bulk Move Tokens (1.1) | process definitions of an application -> instances of one definition -> **current token locations** with the common active token first (instances / tokens / share per step) -> move every token at the selected step to a target step for the selected or all instances, with a confirmation and a per-instance report |
 | Bulk Token Selective (1.4) | the Bulk Move Tokens analysis and move over a pasted list of instance ids |
 | Fire Timers Selective (1.5.1) | pasted instance ids -> pending timers with the common timer first -> fire one selected timer, one token per instance, for the selected / all listed instances; CSV |
+| ENV Manager (1.6.1) | acronyms + snapshot / scope / name / value filters -> environment variables of every picked snapshot (value on this server); edit in the table and save the changed rows, or one value for the selected rows; CSV |
+| EPV Manager (1.6.1) | the same for EPV variables, with an effective date, a reason, the scheduled values and a history dialog per variable; CSV |
 
 ## Install and configure
 

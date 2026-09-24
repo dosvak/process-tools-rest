@@ -279,3 +279,43 @@ this release: the Assign-to-group picker lists 0 groups on 26, and the known Tas
 dialog is closed; `tab()` clicks tabs that overflowed into the tab-row menu (the new tab pushed Execute JavaScript there at 1800 px); cleanup
 deletes with `?action=delete`; the test app / BPD ids are resolved per lab from `GET /exposed/process` (BAWJSON, else TDGEN).
 Manual replication guide: `docs/PTREST-1.5-MANUAL-CHANGES.md` (1.4 -> 1.5.1).
+
+## 1.6 / 1.6.1 (2026-09-24): ENV Manager and EPV Manager
+
+User request: two tabs that list the environment variables / EPVs of an application from its acronym and filter inputs, and edit them
+in a user-friendly way. 1.6 (imported on 8.6.2 only) failed in *Build requests* of the list flows (`acronyms` not defined in stage 1);
+**1.6.1** is the fixed build and the only one to publish.
+
+### What changed (generator only, `tools/build_ptrest.py --snapshot 1.6.1`)
+
+- Business objects: `PTVarCriteria` {containers, versions, scope, epv, name, value}, `PTEnvRow` / `PTEpvRow` (one row per variable and
+  snapshot; `value` = edited in the table, `original` = the stored value; EPV rows add epv, epvContainer, variable, type, scheduled,
+  history, description), `PTEnvList` / `PTEpvList`, `PTEnvSave` {rows}, `PTEpvSave` {rows, effective, reason}.
+- **PT Env List** / **PT EPV List** (two stages): stage 1 `GET /ops/std/bpm/containers/{acronym}/versions` per acronym; stage 2
+  `GET .../versions/{version}/env_vars` or `.../epvs?optional_parts=previous_values,future_values` for every picked snapshot - named,
+  not archived, the listed snapshots (empty = all), scope all / active / newest, newest first, at most 100 snapshots. Rows filtered by
+  "contains" (case-insensitive) on the EPV name, variable name and value. The snapshot selection (`PICK_VERSIONS`) is one script shared
+  by *Build stage 2 requests* and *Map response*, so both walk the same snapshots in the same order.
+- **PT Env Save**: the rows grouped per snapshot -> one `POST .../env_vars {pairs: [{name, value}]}` per snapshot.
+- **PT EPV Save** (two stages): one `POST .../epvs {variable_value_details: [{epv_name, epv_variable_name, epv_variable_value,
+  effective_date, reason, epv_container_acronym}]}` per snapshot; a request refused with *Unrecognized field* (8.6.2 knows neither
+  `reason` nor `epv_container_acronym`) is sent again in stage 2 without them.
+- Views **ENV Manager** / **EPV Manager** (`views.var_manager`, tabs after Execute JavaScript): filter row, *Lookup*, multi-select table
+  whose *Value* column is a Text input (`table(..., editable=('value',))`), *Save changes* (the rows whose value differs from the stored
+  one; confirmation lists them), *Set value for selected* (dialog prefilled with the first selected value, one value for all selected
+  rows), *Discard changes* (= Lookup), CSV (*PT Env To CSV* / *PT EPV To CSV*); EPV Manager adds *Effective from* (date/time, empty =
+  now), *Reason*, *Scheduled values* column and a *History* dialog (current, default, scheduled, previous values). The list reloads
+  after every save.
+
+### Verification (2026-09-24)
+
+Flow scripts run locally against both labs with a mock `tw` runtime (`<scratch>/runflow.cjs`: Build -> curl loop -> stage 2 -> Map, real
+REST answers): lists with scope / snapshot / name / value filters, unknown acronym, empty acronym; env save of two snapshots and
+restore; EPV save with a reason and restore (8.6.2: 500 *Unrecognized field "reason"* -> stage 2 without it -> stored; BAW 26: stored
+with the reason in one call). Deep test `tools/pc_ptrest_test.py` sections ENV Manager / EPV Manager (fixture `VAR_APP`, default GUITS:
+googleMapsApiKey and PDiagramData.processDiagramString edited in the table, stored, checked over REST, restored).
+Imported as 1.6.1 on 8.6.2 and BAW 26 (flows answer on both through `ft_rest_test.py`). Full deep test: 8.6.2 **109 / 110**
+(`docs/ptrest_test_161.json`), BAW 26 **109 / 110** (`docs/ptrest_test_161_26.json`); the 16 new checks pass on both, the one failure is
+the known Task Data ordering issue (the Tasks section completes the last open task first). One BAW 26 run lost the coach from Event
+Manager Tasks onwards (every later tab failed); the rerun was clean. Test fix: the edited Value cell is an input, so its text is not
+part of the row text - the check reads the cell. The 1.6 snapshot (list flows broken) was archived on 8.6.2.
